@@ -1,6 +1,6 @@
 app [main!] {
-    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.18.0/0APbwVN1_p1mJ96tXjaoiUCr8NBGamr8G8Ac_DrXR-o.tar.br",
-    json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.11.0/z45Wzc-J39TLNweQUoLw3IGZtkQiEN3lTBv3BXErRjQ.tar.br",
+    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.19.0/Hj-J_zxz7V9YurCSTFcFdu6cQJie4guzsPMUi5kBYUk.tar.br",
+    json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.12.0/1trwx8sltQ-e9Y2rOB4LWUWLS_sFVyETK8Twl0i9qpw.tar.gz",
 }
 
 import pf.Http
@@ -9,145 +9,149 @@ import pf.Stderr
 import pf.Env
 import json.Json
 import json.Option exposing [Option]
-import Decode exposing [fromBytesPartial]
+import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
 
-import "prompt-palindrome.txt" as promptText : Str
+import "prompt-palindrome.txt" as prompt_text : Str
 
 # Output of `roc test` and `roc check` gets written to this file
-cmdOutputFile = "last_cmd_output.txt"
+cmd_output_file = "last_cmd_output.txt"
 
 # Claude will write to this file and execute `roc check` and `roc test` on it
-claudeRocFile = "main_claude.roc"
-claudeMaxRequests = 8
+claude_roc_file = "main_claude.roc"
+claude_max_requests = 8
 # Choose between:
 # - smartest, expensive: "claude-3-5-sonnet-20241022"
 # - decent, cheap, fast: "claude-3-5-haiku-20241022"
-claudeModel = "claude-3-5-sonnet-20241022"
+claude_model = "claude-3-5-sonnet-20241022"
 
-httpRequestTimeout = 5 * 60 * 1000
+http_request_timeout = 5 * 60 * 1000
 
-main! = \_args ->
-    try rocVersionCheck! {}
+main! = |_args|
+    roc_version_check!({})?
 
-    try loopClaude! claudeMaxRequests promptText []
+    loop_claude!(claude_max_requests, prompt_text, [])?
 
-    Ok {}
+    Ok({})
 
-loopClaude! = \remainingClaudeCalls, prompt, previousMessages ->
+loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
-    try info! "Prompt:\n\n$(prompt)\n"
+    info!("Prompt:\n\n${prompt}\n")?
 
-    try info! "Asking Claude...\n"
-    claudeAnswer = try askClaude! prompt previousMessages
+    info!("Asking Claude...\n")?
+    claude_answer = ask_claude!(prompt, previous_messages)?
 
-    try info! "Claude's reply:\n\n$(claudeAnswer)\nEND\n\n"
+    info!("Claude's reply:\n\n${claude_answer}\nEND\n\n")?
 
-    codeBlockRes = extractMarkdownCodeBlock claudeAnswer
+    code_block_res = extract_markdown_code_block(claude_answer)
 
-    when codeBlockRes is
-        Ok codeBlock ->
-            try File.write_utf8! codeBlock claudeRocFile
+    when code_block_res is
+        Ok(code_block) ->
+            File.write_utf8!(code_block, claude_roc_file)?
 
-            try info! "Running `roc check`...\n"
-            checkOutputResult = executeRocCheck! {}
+            info!("Running `roc check`...\n")?
+            check_output_result = execute_roc_check!({})
 
-            try stripColorCodes! {}
-            checkOutput = try File.read_utf8! cmdOutputFile
+            strip_color_codes!({})?
+            check_output = File.read_utf8!(cmd_output_file)?
 
-            try Stdout.line! "\n$(Inspect.toStr checkOutput)\n\n"
+            Stdout.line!("\n${Inspect.to_str(check_output)}\n\n")?
 
-            when checkOutputResult is
-                Ok {} ->
-                    try info! "Running `roc test`...\n"
-                    testOutputResult = executeRocTest! {}
+            when check_output_result is
+                Ok({}) ->
+                    info!("Running `roc test`...\n")?
+                    test_output_result = execute_roc_test!({})
 
-                    try stripColorCodes! {}
-                    testOutput = try File.read_utf8! cmdOutputFile
+                    strip_color_codes!({})?
+                    test_output = File.read_utf8!(cmd_output_file)?
 
-                    when testOutputResult is
-                        Ok {} ->
-                            try Stdout.line! "\n$(Inspect.toStr testOutput)\n\n"
+                    when test_output_result is
+                        Ok({}) ->
+                            Stdout.line!("\n${Inspect.to_str(test_output)}\n\n")?
 
-                            Ok {}
+                            Ok({})
 
-                        Err e ->
-                            try info! "`roc test` failed.\n"
+                        Err(e) ->
+                            info!("`roc test` failed.\n")?
 
-                            try Stderr.line! (Inspect.toStr e)
+                            Stderr.line!(Inspect.to_str(e))?
 
-                            retry! remainingClaudeCalls previousMessages prompt claudeAnswer testOutput
+                            retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, test_output)
 
-                Err e ->
-                    try info! "`roc check` failed.\n"
+                Err(e) ->
+                    info!("`roc check` failed.\n")?
 
-                    try Stderr.line! (Inspect.toStr e)
+                    Stderr.line!(Inspect.to_str(e))?
 
-                    retry! remainingClaudeCalls previousMessages prompt claudeAnswer checkOutput
+                    retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, check_output)
 
-        Err e ->
-            Err (ExtractMarkdownCodeBlockFailed (Inspect.toStr e))
+        Err(e) ->
+            Err(ExtractMarkdownCodeBlockFailed(Inspect.to_str(e)))
 
-askClaude! : Str, List { role : Str, content : Str } => Result Str _
-askClaude! = \prompt, previousMessages ->
-    escapedPrompt = escapeStr prompt
+ask_claude! : Str, List { role : Str, content : Str } => Result Str _
+ask_claude! = |prompt, previous_messages|
+    escaped_prompt = escape_str(prompt)
 
-    escapedPreviousMessages =
-        List.map previousMessages \message ->
-            { message & content: escapeStr message.content }
+    escaped_previous_messages =
+        List.map(
+            previous_messages,
+            |message|
+                { message & content: escape_str(message.content) },
+        )
 
-    apiKey =
-        Env.decode! "ANTHROPIC_API_KEY"
-        |> Result.mapErr \_ -> FailedToGetAPIKeyFromEnvVar
+    api_key =
+        Env.decode!("ANTHROPIC_API_KEY")
+        |> Result.map_err(|_| FailedToGetAPIKeyFromEnvVar)
         |> try
 
-    messagesToSend =
-        List.append escapedPreviousMessages { role: "user", content: "$(escapedPrompt)" }
-        |> messagesToStr
+    messages_to_send =
+        List.append(escaped_previous_messages, { role: "user", content: "${escaped_prompt}" })
+        |> messages_to_str
 
     request = {
-        method: Post,
+        method: POST,
         headers: [
-            { name: "x-api-key", value: apiKey },
+            { name: "x-api-key", value: api_key },
             { name: "anthropic-version", value: "2023-06-01" },
             { name: "content-type", value: "application/json" },
         ],
         uri: "https://api.anthropic.com/v1/messages",
-        body: Str.toUtf8
+        body: Str.to_utf8(
             """
             {
-                "model": "$(claudeModel)",
+                "model": "${claude_model}",
                 "max_tokens": 8192,
-                "messages": $(messagesToSend)
+                "messages": ${messages_to_send}
             }
             """,
-        timeout_ms: TimeoutMilliseconds httpRequestTimeout,
+        ),
+        timeout_ms: TimeoutMilliseconds(http_request_timeout),
     }
 
     response =
-        Http.send! request
+        Http.send!(request)?
 
-    responseBody =
-        Str.fromUtf8 response.body
+    response_body =
+        Str.from_utf8(response.body)
 
-    when responseBody is
-        Ok replyBody ->
-            jsonDecoder = Json.utf8With { fieldNameMapping: SnakeCase }
+    when response_body is
+        Ok(reply_body) ->
+            json_decoder = Json.utf8_with({ field_name_mapping: SnakeCase })
 
             decoded : DecodeResult ClaudeReply
-            decoded = fromBytesPartial (Str.toUtf8 replyBody) jsonDecoder
+            decoded = from_bytes_partial(Str.to_utf8(reply_body), json_decoder)
 
             when decoded.result is
-                Ok claudeReply ->
-                    when List.first claudeReply.content is
-                        Ok firstContentElt -> Ok firstContentElt.text
-                        Err _ -> Err ClaudeReplyContentJsonFieldWasEmptyList
+                Ok(claude_reply) ->
+                    when List.first(claude_reply.content) is
+                        Ok(first_content_elt) -> Ok(first_content_elt.text)
+                        Err(_) -> Err(ClaudeReplyContentJsonFieldWasEmptyList)
 
-                Err e -> Err (ClaudeJsonDecodeFailed "Error:\n\tFailed to decode claude API reply into json: $(Inspect.toStr e)\n\n\tbody:\n\t\t$(replyBody)")
+                Err(e) -> Err(ClaudeJsonDecodeFailed("Error:\n\tFailed to decode claude API reply into json: ${Inspect.to_str(e)}\n\n\tbody:\n\t\t${reply_body}"))
 
-        Err err ->
-            Err (ClaudeHTTPSendFailed err)
+        Err(err) ->
+            Err(ClaudeHTTPSendFailed(err))
 
 ClaudeReply : {
     id : Str,
@@ -155,110 +159,114 @@ ClaudeReply : {
     role : Str,
     model : Str,
     content : List { type : Str, text : Str },
-    stopReason : Str,
-    stopSequence : Option Str,
+    stop_reason : Str,
+    stop_sequence : Option Str,
     usage : {
-        inputTokens : U64,
-        outputTokens : U64,
+        input_tokens : U64,
+        output_tokens : U64,
     },
 }
 
-retry! = \remainingClaudeCalls, previousMessages, oldPrompt, claudeAnswer, newPrompt ->
-    if remainingClaudeCalls > 0 then
-        newPreviousMessages = List.concat previousMessages [{ role: "user", content: oldPrompt }, { role: "assistant", content: claudeAnswer }]
+retry! = |remaining_claude_calls, previous_messages, old_prompt, claude_answer, new_prompt|
+    if remaining_claude_calls > 0 then
+        new_previous_messages = List.concat(previous_messages, [{ role: "user", content: old_prompt }, { role: "assistant", content: claude_answer }])
 
-        loopClaude! (remainingClaudeCalls - 1) newPrompt newPreviousMessages
+        loop_claude!((remaining_claude_calls - 1), new_prompt, new_previous_messages)
     else
-        Err ReachedMaxClaudeCalls
+        Err(ReachedMaxClaudeCalls)
 
-executeRocCheck! = \{} ->
-    bashCmd =
-        Cmd.new "bash"
-        |> Cmd.arg "-c"
-        |> Cmd.arg "roc check main_claude.roc > last_cmd_output.txt 2>&1"
+execute_roc_check! = |{}|
+    bash_cmd =
+        Cmd.new("bash")
+        |> Cmd.arg("-c")
+        |> Cmd.arg("roc check main_claude.roc > last_cmd_output.txt 2>&1")
 
-    cmd_exit_code = try Cmd.status! bashCmd
+    cmd_exit_code = try(Cmd.status!, bash_cmd)
 
     if cmd_exit_code != 0 then
-        Err (StripColorCodesFailedWithExitCode cmd_exit_code)
+        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
     else
-        Ok {}
+        Ok({})
 
-executeRocTest! = \{} ->
-    bashCmd =
-        Cmd.new "bash"
-        |> Cmd.arg "-c"
-        |> Cmd.arg
+execute_roc_test! = |{}|
+    bash_cmd =
+        Cmd.new("bash")
+        |> Cmd.arg("-c")
+        |> Cmd.arg(
             """
             (timeout 2m roc test main_claude.roc > last_cmd_output.txt 2>&1 || { ret=$?; if [ $ret -eq 124 ]; then echo "'roc test' timed out after two minutes!" >> last_cmd_output.txt; fi; exit $ret; })
-            """
+            """,
+        )
 
-    cmd_exit_code = try Cmd.status! bashCmd
+    cmd_exit_code = try(Cmd.status!, bash_cmd)
 
     if cmd_exit_code != 0 then
-        Err (StripColorCodesFailedWithExitCode cmd_exit_code)
+        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
     else
-        Ok {}
+        Ok({})
 
 # HELPERS
 
-rocVersionCheck! : {} => Result {} _
-rocVersionCheck! = \{} ->
-    try info! "Checking if roc command is available; executing `roc version`:"
+roc_version_check! : {} => Result {} _
+roc_version_check! = |{}|
+    try(info!, "Checking if roc command is available; executing `roc version`:")
 
-    Cmd.exec! "roc" ["version"]
-    |> Result.mapErr RocVersionCheckFailed
+    Cmd.exec!("roc", ["version"])
+    |> Result.map_err(RocVersionCheckFailed)
 
-stripColorCodes! = \{} ->
-    bashCmd =
-        Cmd.new "bash"
-        |> Cmd.arg "removeColorCodes.sh"
+strip_color_codes! = |{}|
+    bash_cmd =
+        Cmd.new("bash")
+        |> Cmd.arg("removeColorCodes.sh")
 
-    cmd_exit_code = try Cmd.status! bashCmd
+    cmd_exit_code = try(Cmd.status!, bash_cmd)
 
     if cmd_exit_code != 0 then
-        Err (StripColorCodesFailedWithExitCode cmd_exit_code)
+        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
     else
-        Ok {}
+        Ok({})
 
-extractMarkdownCodeBlock = \text ->
-    if !(Str.contains text "```roc") then
-        Err (NoRocCodeBlockInClaudeReply text)
+extract_markdown_code_block = |text|
+    if !(Str.contains(text, "```roc")) then
+        Err(NoRocCodeBlockInClaudeReply(text))
     else
-        splitOnBackticksRoc = Str.splitOn text "```roc"
-        splitOnBackticks =
-            List.get? splitOnBackticksRoc 1
-            |> Str.splitOn "```"
+        split_on_backticks_roc = Str.split_on(text, "```roc")
+        split_on_backticks =
+            List.get(split_on_backticks_roc, 1)?
+            |> Str.split_on("```")
 
-        when List.get splitOnBackticks 0 is
-            Ok codeBlockDirty -> Ok (removeFirstLine codeBlockDirty)
-            Err _ -> crash "This should be impossible due to previous if"
+        when List.get(split_on_backticks, 0) is
+            Ok(code_block_dirty) -> Ok(remove_first_line(code_block_dirty))
+            Err(_) -> crash("This should be impossible due to previous if")
 
-removeFirstLine = \str ->
-    Str.splitOn str "\n"
-    |> List.dropFirst 1
-    |> Str.joinWith "\n"
+remove_first_line = |str|
+    Str.split_on(str, "\n")
+    |> List.drop_first(1)
+    |> Str.join_with("\n")
 
-messagesToStr : List { role : Str, content : Str } -> Str
-messagesToStr = \messages ->
-    messagesStr =
-        List.map messages \message ->
-            """
-            {"role": "$(message.role)", "content": "$(message.content)"}
-            """
-        |> Str.joinWith ", "
+messages_to_str : List { role : Str, content : Str } -> Str
+messages_to_str = |messages|
+    messages_str =
+        List.map(
+            messages,
+            |message|
+                """
+                {"role": "${message.role}", "content": "${message.content}"}
+                """,
+        )
+        |> Str.join_with(", ")
 
     """
-    [$(messagesStr)]
+    [${messages_str}]
     """
 
-info! = \msg ->
-    Stdout.line! "\u(001b)[34mINFO:\u(001b)[0m $(msg)"
+info! = |msg|
+    Stdout.line!("\u(001b)[34mINFO:\u(001b)[0m ${msg}")
 
-escapeStr : Str -> Str
-escapeStr = \str ->
-    Str.replaceEach str "\\" "\\\\"
-    |> Str.replaceEach "\n" "\\n"
-    |> Str.replaceEach "\t" "\\t"
-    |> Str.replaceEach "\"" "\\\""
+escape_str : Str -> Str
+escape_str = |str|
+    Str.replace_each(str, "\\", "\\\\")
+    |> Str.replace_each("\n", "\\n")
+    |> Str.replace_each("\t", "\\t")
+    |> Str.replace_each("\"", "\\\"")
 
