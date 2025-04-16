@@ -5,7 +5,9 @@
 
 # roc-agent
 
-LLM agent setup for Roc programming. Runs Claude in a loop until all tests pass.
+AI agent setup for Roc programming. Makes Claude write code in a loop until all tests pass. Alter [prompt-palindrome.txt](https://github.com/Anton-4/roc-agent/blob/main/prompt-palindrome.txt) to fit your purpose.
+
+Note: the roc-agent can currently only work with a single `.roc` file.
 
 :bangbang: This lets Claude run code on your machine autonomously without restrictions. It is unlikely that Claude will screw something up on your machine, but use caution and make sure you don't copy paste a prompt from an untrusted source.
 
