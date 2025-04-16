@@ -22,9 +22,9 @@ cmd_output_file = "last_cmd_output.txt"
 claude_roc_file = "main_claude.roc"
 claude_max_requests = 8
 # Choose between:
-# - smartest, expensive: "claude-3-5-sonnet-20241022"
+# - smartest, expensive: "claude-3-7-sonnet-20250219"
 # - decent, cheap, fast: "claude-3-5-haiku-20241022"
-claude_model = "claude-3-5-sonnet-20241022"
+claude_model = "claude-3-7-sonnet-20250219"
 
 http_request_timeout = 5 * 60 * 1000
 

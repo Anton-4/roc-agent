@@ -291,6 +291,8 @@ Extra instructions:
 - Roc does not allow shadowing.
 - Make sure to avoid unused variables, types, or arguments.
 - Try to avoid integer overflows.
+- Roc functions are defined like this: `|arg| do_something(arg)`, never use the old function syntax: `\arg -> do_something(arg)`
+- You can not do destructuring like this `start_pos, max_len = 0, 1`, use `(start_pos, max_len) = (0, 1)` instead.
 - Roc can hit an exhaustiveness bug in pattern matching where it says "Other possibilities include:" when in reality all possibilites are covered, if that bug happens, include a branch like this:
 ```
 _ -> crash "Roc bug, the previous branches actually are exhaustive."
