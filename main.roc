@@ -13,7 +13,12 @@ import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
 
-import "prompt-palindrome.txt" as prompt_text : Str
+import "prompt-fix-error.txt" as prompt_text : Str
+#import "prompt-puzzle.txt" as prompt_text : Str
+
+# This should be false if you want Claude to write code from scrath.
+# Set this to true if you want Claude to fix errors in the provided code but ignore pre-existing warnings.
+allow_warnings = Bool.true
 
 # Output of `roc test` and `roc check` gets written to this file
 cmd_output_file = "last_cmd_output.txt"
@@ -51,7 +56,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
             File.write_utf8!(code_block, claude_roc_file)?
 
             info!("Running `roc check`...\n")?
-            check_output_result = execute_roc_check!({})
+            check_output_result = execute_roc_check!(allow_warnings)
 
             strip_color_codes!({})?
             check_output = File.read_utf8!(cmd_output_file)?
@@ -61,7 +66,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
             when check_output_result is
                 Ok({}) ->
                     info!("Running `roc test`...\n")?
-                    test_output_result = execute_roc_test!({})
+                    test_output_result = execute_roc_test!(allow_warnings)
 
                     strip_color_codes!({})?
                     test_output = File.read_utf8!(cmd_output_file)?
@@ -175,7 +180,7 @@ retry! = |remaining_claude_calls, previous_messages, old_prompt, claude_answer, 
     else
         Err(ReachedMaxClaudeCalls)
 
-execute_roc_check! = |{}|
+execute_roc_check! = |ignore_check_warnings|
     bash_cmd =
         Cmd.new("bash")
         |> Cmd.arg("-c")
@@ -183,12 +188,17 @@ execute_roc_check! = |{}|
 
     cmd_exit_code = try(Cmd.status!, bash_cmd)
 
+    dbg cmd_exit_code
+
     if cmd_exit_code != 0 then
-        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
+        if ignore_check_warnings and cmd_exit_code == 2 then
+            Ok({})
+        else
+            Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
     else
         Ok({})
 
-execute_roc_test! = |{}|
+execute_roc_test! = |ignore_test_warnings|
     bash_cmd =
         Cmd.new("bash")
         |> Cmd.arg("-c")
@@ -201,7 +211,10 @@ execute_roc_test! = |{}|
     cmd_exit_code = try(Cmd.status!, bash_cmd)
 
     if cmd_exit_code != 0 then
-        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
+        if ignore_test_warnings and cmd_exit_code == 2 then
+            Ok({})
+        else
+            Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
     else
         Ok({})
 

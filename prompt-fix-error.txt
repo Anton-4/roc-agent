@@ -1,0 +1,351 @@
+We're going to fix an error in a Roc program.
+
+If you need to add a function, these are the functions you can use:
+```roc
+Bool.false : Bool
+Bool.true : Bool
+Decode.from_bytes_partial : List U8, fmt -> DecodeResult val where val implements Decoding, fmt implements DecoderFormatting
+Dict.empty : {} -> Dict * *
+Dict.from_list : List (k, v) -> Dict k v
+Dict.get : Dict k v, k -> Result v [KeyNotFound]
+Dict.insert : Dict k v, k, v -> Dict k v
+Dict.insert_all : Dict k v, Dict k v -> Dict k v
+Dict.join_map : Dict a b, (a, b -> Dict x y) -> Dict x y
+Dict.keys : Dict k v -> List k
+Dict.map : Dict k a, (k, a -> b) -> Dict k b
+Dict.remove : Dict k v, k -> Dict k v
+Dict.single : k, v -> Dict k v
+Dict.to_list : Dict k v -> List (k, v)
+Dict.update : Dict k v, k, (Result v [Missing] -> Result v [Missing]) -> Dict k v
+Dict.walk : Dict k v, state, (state, k, v -> state) -> state
+Encode.to_bytes : val, fmt -> List U8 where val implements Encoding, fmt implements EncoderFormatting
+List.all : List a, (a -> Bool) -> Bool
+List.any : List a, (a -> Bool) -> Bool
+List.append : List a, a -> List a
+List.chunks_of : List a, U64 -> List (List a)
+List.concat : List a, List a -> List a
+List.contains : List a, a -> Bool where a implements Eq
+List.drop_at : List elem, U64 -> List elem
+List.drop_first : List elem, U64 -> List elem
+List.drop_if : List a, (a -> Bool) -> List a
+List.drop_last : List elem, U64 -> List elem
+List.find_first : List elem, (elem -> Bool) -> Result elem [NotFound]
+List.find_first_index : List elem, (elem -> Bool) -> Result U64 [NotFound]
+List.find_last_index : List elem, (elem -> Bool) -> Result U64 [NotFound]
+List.first : List a -> Result a [ListWasEmpty]
+List.get : List a, U64 -> Result a [OutOfBounds]
+List.intersperse : List elem, elem -> List elem
+List.is_empty : List * -> Bool
+List.join : List (List a) -> List a
+List.join_map : List a, (a -> List b) -> List b
+List.keep_if : List a, (a -> Bool) -> List a
+List.keep_oks : List before, (before -> Result after *) -> List after
+List.last : List a -> Result a [ListWasEmpty]
+List.len : List * -> U64
+List.map : List a, (a -> b) -> List b
+List.map2 : List a, List b, (a, b -> c) -> List c
+List.map_try : List elem, (elem -> Result ok err) -> Result (List ok) err
+List.map_with_index : List a, (a, U64 -> b) -> List b
+List.max : List (Num a) -> Result (Num a) [ListWasEmpty]
+List.min : List (Num a) -> Result (Num a) [ListWasEmpty]
+List.range : { end : [At (Num a), Before (Num a), Length U64], start : [After (Num a), At (Num a)], step ? Num a }* -> List (Num a)
+List.repeat : a, U64 -> List a
+List.replace : List a, U64, a -> { list : List a, value : a }
+List.reverse : List a -> List a
+List.sort_asc : List (Num a) -> List (Num a)
+List.sort_desc : List (Num a) -> List (Num a)
+List.sort_with : List a, (a, a -> [LT, EQ, GT]) -> List a
+List.split_at : List elem, U64 -> { before : List elem, others : List elem }
+List.split_on : List a, a -> List (List a) where a implements Eq
+List.sublist : List elem, { start : U64, len : U64 } -> List elem
+List.sum : List (Num a) -> Num a
+List.swap : List a, U64, U64 -> List a
+List.take_first : List elem, U64 -> List elem
+List.take_last : List elem, U64 -> List elem
+List.update : List a, U64, (a -> a) -> List a
+List.walk : List elem, state, (state, elem -> state) -> state
+List.walk_backwards : List elem, state, (state, elem -> state) -> state
+List.walk_try : List elem, state, (state, elem -> Result state err) -> Result state err
+List.walk_until : List elem, state, (state, elem -> [Continue state, Break state]) -> state
+List.walk_with_index : List elem, state, (state, elem, U64 -> state) -> state
+List.walk_with_index_until : List elem, state, (state, elem, U64 -> [Continue state, Break state]) -> state
+List.with_capacity : U64 -> List *
+Num.abs : Num a -> Num a
+Num.add : Num a, Num a -> Num a
+Num.add_checked : Num a, Num a -> Result (Num a) [Overflow]
+Num.bitwise_and : Int a, Int a -> Int a
+Num.bitwise_or : Int a, Int a -> Int a
+Num.ceiling : Frac * -> Int *
+Num.compare : Num a, Num a -> [LT, EQ, GT]
+Num.cos : Frac a -> Frac a
+Num.div : Frac a, Frac a -> Frac a
+Num.div_trunc : Int a, Int a -> Int a
+Num.div_trunc_checked : Int a, Int a -> Result (Int a) [DivByZero]
+Num.e : Frac *
+Num.int_cast : Int a -> Int b
+Num.is_approx_eq : Frac a, Frac a, { rtol ? Frac a, atol ? Frac a } -> Bool
+Num.is_even : Int a -> Bool
+Num.is_multiple_of : Int a, Int a -> Bool
+Num.max : Num a, Num a -> Num a
+Num.max_u64 : U64
+Num.min : Num a, Num a -> Num a
+Num.mul : Num a, Num a -> Num a
+Num.pow : Frac a, Frac a -> Frac a
+Num.pow_int : Int a, Int a -> Int a
+Num.rem : Int a, Int a -> Int a
+Num.round : Frac * -> Int *
+Num.shift_left_by : Int a, U8 -> Int a
+Num.shift_right_zf_by : Int a, U8 -> Int a
+Num.sin : Frac a -> Frac a
+Num.sqrt : Frac a -> Frac a
+Num.sub_checked : Num a, Num a -> Result (Num a) [Overflow]
+Num.sub_saturated : Num a, Num a -> Num a
+Num.to_f64 : Num * -> F64
+Num.to_frac : Num * -> Frac *
+Num.to_i64 : Int * -> I64
+Num.to_i8 : Int * -> I8
+Num.to_str : Num * -> Str
+Num.to_u16 : Int * -> U16
+Num.to_u32 : Int * -> U32
+Num.to_u64 : Int * -> U64
+Num.to_u64_checked : Int * -> Result U64 [OutOfBounds]
+Num.to_u8 : Int * -> U8
+Result.is_ok : Result ok err -> Bool
+Result.map_err : Result ok a, (a -> b) -> Result ok b
+Result.on_err : Result a err, (err -> Result a otherErr) -> Result a otherErr
+Result.try : Result a err, (a -> Result b err) -> Result b err
+Result.with_default : Result ok err, ok -> ok
+Result.map_ok : Result a err, (a -> b) -> Result b err
+Result.map2 : Result a err, Result b err, (a, b -> c) -> Result c err
+Set.contains : Set k, k -> Bool
+Set.empty : {} -> Set *
+Set.from_list : List k -> Set k
+Set.insert : Set k, k -> Set k
+Set.intersection : Set k, Set k -> Set k
+Set.is_empty : Set * -> Bool
+Set.keep_if : Set k, (k -> Bool) -> Set k
+Set.len : Set * -> U64
+Set.map : Set a, (a -> b) -> Set b
+Set.remove : Set k, k -> Set k
+Set.single : k -> Set k
+Set.to_list : Set k -> List k
+Set.union : Set k, Set k -> Set k
+Set.walk_until : Set k, state, (state, k -> [Continue state, Break state]) -> state
+Str.contains : Str, Str -> Bool
+Str.ends_with : Str, Str -> Bool
+Str.from_utf8 : List U8 -> Result Str [BadUtf8  { problem : Utf8Problem, index : U64 } ]
+Str.is_empty : Str -> Bool
+Str.join_with : List Str, Str -> Str
+Str.repeat : Str, U64 -> Str
+Str.replace_each : Str, Str, Str -> Str
+Str.replace_first : Str, Str, Str -> Str
+Str.split_first : Str, Str -> Result { before : Str, after : Str } [NotFound]
+Str.split_on : Str, Str -> List Str
+Str.starts_with : Str, Str -> Bool
+Str.to_i16 : Str -> Result I16 [InvalidNumStr]
+Str.to_i64 : Str -> Result I64 [InvalidNumStr]
+Str.to_u32 : Str -> Result U32 [InvalidNumStr]
+Str.to_u64 : Str -> Result U64 [InvalidNumStr]
+Str.to_utf8 : Str -> List U8
+Str.trim : Str -> Str
+Str.trim_end : Str -> Str
+Task.map : Task a c, (a -> b) -> Task b c
+```
+
+Here is some example Roc code to make sure you understand what the latest version of Roc looks like:
+```roc
+app [main!] {
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.19.0/Hj-J_zxz7V9YurCSTFcFdu6cQJie4guzsPMUi5kBYUk.tar.br",
+}
+
+import cli.Stdout
+import cli.Arg exposing [Arg]
+import cli.Env
+import cli.Http
+import cli.Dir
+import cli.Utc exposing [Utc]
+import cli.Path exposing [Path]
+
+usage = "HELLO=1 roc main.roc -- \"https://www.roc-lang.org\" roc.html"
+
+main! : List Arg => Result {} _
+main! = |args|
+
+    # Get time since [Unix Epoch](https://en.wikipedia.org/wiki/Unix_time)
+    start_time : Utc
+    start_time = Utc.now!({})
+
+    # Read the HELLO environment variable
+    hello_env : Str
+    hello_env =
+        read_env_var!("HELLO")?
+        |> |env_var_content|
+            if Str.is_empty(env_var_content) then
+                "was empty"
+            else
+                "was set to ${env_var_content}"
+
+    Stdout.line!("HELLO env var ${hello_env}")?
+
+    # Read command line arguments
+    { url, output_path } = parse_args!(args)?
+
+    Stdout.line!("Fetching content from ${url}...")?
+
+    # Fetch the provided url using HTTP
+    html_str : Str
+    html_str = fetch_html!(url)?
+
+    Stdout.line!("Saving url HTML to ${Path.display(output_path)}...")?
+
+    # Write HTML string to a file
+    Result.map_err(
+        Path.write_utf8!(html_str, output_path),
+        |_| FailedToWriteFile("Failed to write to file ${Path.display(output_path)}, usage: ${usage}"),
+    )?
+
+    # Print contents of current working directory
+    list_cwd_contents!({})?
+
+    end_time : Utc
+    end_time = Utc.now!({})
+
+    run_duration = Utc.delta_as_millis(start_time, end_time)
+
+    Stdout.line!("Run time: ${Num.to_str(run_duration)} ms")?
+
+    Stdout.line!("Done")?
+
+    Ok({})
+
+parse_args! : List Arg => Result { url : Str, output_path : Path } _
+parse_args! = |args|
+    when List.map(args, Arg.display) is
+        [_, first, second, ..] ->
+            Ok({ url: first, output_path: Path.from_str(second) })
+
+        _ ->
+            Err(FailedToReadArgs("Failed to read command line arguments, usage: ${usage}"))
+
+read_env_var! : Str => Result Str []
+read_env_var! = |env_var_name|
+    when Env.var!(env_var_name) is
+        Ok(env_var_str) if !Str.is_empty(env_var_str) -> Ok(env_var_str)
+        _ -> Ok("")
+
+fetch_html! : Str => Result Str _
+fetch_html! = |url|
+    Http.get_utf8!(url)
+    |> Result.map_err(|err| FailedToFetchHtml("Failed to fetch URL ${Inspect.to_str(err)}, usage: ${usage}"))
+
+# effects need to be functions so we use the empty input type `{}`
+list_cwd_contents! : {} => Result {} _
+list_cwd_contents! = |_|
+
+    dir_contents =
+        Result.map_err(
+            Dir.list!("."),
+            |_| FailedToListCwd("Failed to list contents of current directory, usage: ${usage}"),
+        )?
+
+    contents_str =
+        dir_contents
+        |> List.map(Path.display)
+        |> Str.join_with(",")
+
+    Stdout.line!("Contents of current directory: ${contents_str}")
+```
+
+# Error
+
+── UNFINISHED PARENTHESES in temp.roc ──────────────────────────────────────────
+
+I am partway through parsing a record pattern, but I got stuck here:
+
+15│      |> List.walk_try(
+16│          {index: 0, state},
+17│          |compound_state, elem|
+             ^
+
+I was expecting to see a closing parenthesis next, so try adding a )
+and see if that helps?
+
+Source code:
+```roc
+app [main!] { cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.19.0/Hj-J_zxz7V9YurCSTFcFdu6cQJie4guzsPMUi5kBYUk.tar.br" }
+
+import cli.Stdout
+
+main! = |_args|
+    Stdout.line!("Hello, World!")
+
+walk_try_with_index :
+    List elem,
+    state,
+    (state, elem, U64 -> Result state err)
+    -> Result state err
+walk_try_with_index = |list, state, f|
+    list
+    |> List.walk_try(
+        {index: 0, state},
+        |compound_state, elem|
+            Ok(
+                {
+                    index: compound_state.index + 1,
+                    state: f(compound_state.state, elem, compound_state.index)!,
+                }
+            )
+    )
+    |> Result.map_ok(.state)
+```
+
+Do not modify the `app [main!] {...` line above.
+
+Extra instructions:
+- Start your reply with an analysis of what could be going wrong paired with potential solutions.
+- Do not provide an explanation after the code block.
+- Always reply with the full code, no partial snippets with changes. There should be only one code block in your reply.
+- Roc no longer uses white space application syntax, but parens and commas instead. So `Stdout.line! "Hello, World!"` is now `Stdout.line!("Hello, World!")`.
+- Roc used to use pascalCase for variables, this has changed to snake_case. So `fizzBuzz` is now `fizz_buzz`.
+- Do not use the Parser package.
+- String interpolation works like this: `"Two plus three is: $(Num.to_str(2 + 3))"`.
+- To get the length of a Str use `List.len(Str.to_utf8(some_str))`
+- Roc does not use `head :: tail`, use `[head, .. as tail]` instead. Make sure you do not forget the `as`!
+- Roc does not have currying.
+- You can not pattern match directly on booleans. Avoid using Bool.true and Bool.false in general, it is better to use descriptive tags, for example `HasNoExtraLine` and `HasExtraLine`.
+- Roc does not allow shadowing, i.e. different variables with the same name, use unique variable and function names.
+- Make sure to avoid unused variables, types, or arguments.
+- Try to avoid integer overflows.
+- Roc functions are defined like this: `|arg| do_something(arg)`, never use the old function syntax: `\arg -> do_something(arg)`
+- You can not do destructuring like this `start_pos, max_len = 0, 1`, use `(start_pos, max_len) = (0, 1)` instead.
+- Roc can hit an exhaustiveness bug in pattern matching where it says "Other possibilities include:" when in reality all possibilites are covered, if that bug happens, include a branch like this:
+```
+_ -> crash "Roc bug, the previous branches actually are exhaustive."
+```
+- Use intermediary variables in your expect tests, all variables will be printed on failure, that will make debugging easier. Example:
+```
+expect 
+    part1_result = part1(exampleInput)
+    part1_result == Ok("The sum is 161")
+```
+- You can use `dbg` for debugging, `dbg` does not work with intermediary variables like `expect`. How to use `dbg`:
+```
+# standalone version
+dbg count
+
+# expression version
+if sum == 1 then
+    dbg (some_function foo)
+else
+    some_function bar
+```
+- Make sure to properly format variables of multiline strings. Example:
+```
+example_input_part1 =
+    """
+    1abc2
+    pqr3stu8vwx
+    a1b2c3d4e5f
+    treb7uchet
+    """
+```

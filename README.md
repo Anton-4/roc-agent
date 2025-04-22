@@ -5,7 +5,7 @@
 
 # roc-agent
 
-AI agent setup for Roc programming. Makes Claude write code in a loop until all tests pass. Alter [prompt-palindrome.txt](https://github.com/Anton-4/roc-agent/blob/main/prompt-palindrome.txt) to fit your purpose.
+AI agent setup for Roc programming. Makes Claude write code in a loop until all tests pass. Alter [prompt-puzzle.txt](prompt-puzzle.txt) or [prompt-fix-error.txt](prompt-fix-error.txt) to fit your purpose. Provide the correct prompt .txt file in the import at the top of main.roc.
 
 Note: the roc-agent can currently only work with a single `.roc` file.
 
