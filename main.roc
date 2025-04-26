@@ -13,7 +13,22 @@ import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
 
-import "prompt-palindrome.txt" as prompt_text : Str
+import Prompt.PromptBuilder exposing [prompt_puzzle]
+import "roc-starter-template.roc" as start_roc_template : Str
+
+prompt_text : Str
+prompt_text =
+    prompt_puzzle(puzzle_question, start_roc_template, after_instructions)
+
+puzzle_question =
+    """
+    Add a longest palindromic substring function to this Roc code, add tests using `expect`.
+    That function should do the following:
+    Given a string s, find the longest palindromic substring in s. A palindrome is a string that reads the same backward as forward.
+    """
+
+after_instructions =
+    "Do not modify the `app [main!] {...` line above."
 
 # Output of `roc test` and `roc check` gets written to this file
 cmd_output_file = "last_cmd_output.txt"
