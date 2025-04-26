@@ -11,3 +11,6 @@ main_claude.roc
 
 # Used to store output of commands
 last_cmd_output.txt
+
+# To test Prompt/example_code_basic_cli.roc
+roc.html
