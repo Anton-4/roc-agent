@@ -13,22 +13,34 @@ import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
 
-import Prompt.PromptBuilder exposing [prompt_puzzle]
+import Prompt.PromptBuilder exposing [prompt_script]
 import "roc-starter-template.roc" as start_roc_template : Str
 
 prompt_text : Str
 prompt_text =
-    prompt_puzzle(puzzle_question, start_roc_template, after_instructions)
+    prompt_script(script_question, start_roc_template)
 
-puzzle_question =
+script_question =
     """
-    Add a longest palindromic substring function to this Roc code, add tests using `expect`.
-    That function should do the following:
-    Given a string s, find the longest palindromic substring in s. A palindrome is a string that reads the same backward as forward.
+    Write a Roc script that extracts the exposes list from the file basic-cli/platform/main.roc, it looks like this:
+    ```
+        exposes [
+            Path,
+            Arg,
+            ...
+            Sqlite,
+        ]
+    ```
     """
 
-after_instructions =
-    "Do not modify the `app [main!] {...` line above."
+#     prompt_puzzle(puzzle_question, start_roc_template)
+
+# puzzle_question =
+#     """
+#     Add a longest palindromic substring function to this Roc code, add tests using `expect`.
+#     That function should do the following:
+#     Given a string s, find the longest palindromic substring in s. A palindrome is a string that reads the same backward as forward.
+#     """
 
 # Output of `roc test` and `roc check` gets written to this file
 cmd_output_file = "last_cmd_output.txt"

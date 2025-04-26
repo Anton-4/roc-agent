@@ -1,15 +1,16 @@
 module [
     prompt_puzzle,
-    # TODO: prompt_script,
+    prompt_script,
     # TODO: prompt_fix_error,
 ]
 
 import "example_code_basic_cli.roc" as basic_cli_example : Str
 import Prompt.BuiltinFunctions exposing [builtin_functions_block]
+import Prompt.BasicCliFunctions exposing [basic_cli_functions_raw]
 
 # TODO use a proper puzzle example instead of example_code_basic_cli
-prompt_puzzle : Str, Str, Str -> Str
-prompt_puzzle = |puzzle_question, start_roc_template, instructions|
+prompt_puzzle : Str, Str -> Str
+prompt_puzzle = |puzzle_question, start_roc_template|
     """
     We're going solve a programming puzzle in Roc.
 
@@ -21,11 +22,37 @@ prompt_puzzle = |puzzle_question, start_roc_template, instructions|
 
     ${puzzle_question}
 
+    Use this as a starter template, do not modify the `app [main!] {...` line:
     ```roc
     ${start_roc_template}
     ```
 
-    ${instructions}
+    Extra instructions:
+    ${generic_roc_instructions}
+    """
+
+prompt_script : Str, Str -> Str
+prompt_script = |script_question, start_roc_template|
+    """
+    We're going to write a script in Roc.
+
+    ${builtin_functions_block}
+
+    These are the basic-cli functions you can use:
+    ```roc
+    ${basic_cli_functions_raw}
+    ```
+
+    ${wrap_example(basic_cli_example)}
+
+    # Script
+
+    ${script_question}
+
+    Use this as a starter template, do not modify the `app [main!] {...` line:
+    ```roc
+    ${start_roc_template}
+    ```
 
     Extra instructions:
     ${generic_roc_instructions}
@@ -49,7 +76,7 @@ generic_roc_instructions =
     - Roc no longer uses white space application syntax, but parens and commas instead. So `Stdout.line! "Hello, World!"` is now `Stdout.line!("Hello, World!")`.
     - Roc used to use pascalCase for variables, this has changed to snake_case. So `fizzBuzz` is now `fizz_buzz`.
     - Do not use the Parser package.
-    - String interpolation works like this: `"Two plus three is: ${Num.to_str(2 + 3)}"`.
+    - String interpolation works like this: `"Two plus three is: ${Num.to_str(2 + 3)}"`. Never use the old interpolation syntax: `"Two plus three is: \\(Num.to_str(2 + 3))"`.
     - To get the length of a Str use `List.len(Str.to_utf8(some_str))`
     - Roc does not use `head :: tail`, use `[head, .. as tail]` instead. Make sure you do not forget the `as`!
     - Roc does not have currying.
