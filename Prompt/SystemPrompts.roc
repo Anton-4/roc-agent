@@ -1,7 +1,7 @@
 module [
-    prompt_puzzle,
-    prompt_script,
-    # TODO: prompt_fix_error,
+    system_prompt_puzzle,
+    system_prompt_script,
+    # TODO: system_prompt_fix_error,
 ]
 
 import "example_code_basic_cli.roc" as basic_cli_example : Str
@@ -9,8 +9,8 @@ import Prompt.BuiltinFunctions exposing [builtin_functions_block]
 import Prompt.BasicCliFunctions exposing [basic_cli_functions_raw]
 
 # TODO use a proper puzzle example instead of example_code_basic_cli
-prompt_puzzle : Str, Str -> Str
-prompt_puzzle = |puzzle_question, start_roc_template|
+system_prompt_puzzle : Str
+system_prompt_puzzle =
     """
     We're going solve a programming puzzle in Roc.
 
@@ -18,43 +18,32 @@ prompt_puzzle = |puzzle_question, start_roc_template|
 
     ${wrap_example(basic_cli_example)}
 
-    # Puzzle
-
-    ${puzzle_question}
-
-    Use this as a starter template, do not modify the `app [main!] {...` line:
-    ```roc
-    ${start_roc_template}
-    ```
-
-    Extra instructions:
+    Important instructions:
     ${generic_roc_instructions}
     """
 
-prompt_script : Str, Str -> Str
-prompt_script = |script_question, start_roc_template|
+system_prompt_script : Str
+system_prompt_script = 
     """
     We're going to write a script in Roc.
 
     ${builtin_functions_block}
 
-    These are the basic-cli functions you can use:
+    Below are the basic-cli functions you can use, in contrast to the builtin functions these do need imports. So if you want to use `Env.cwd!`, add `import pf.Env`.
     ```roc
     ${basic_cli_functions_raw}
     ```
 
     ${wrap_example(basic_cli_example)}
 
-    # Script
-
-    ${script_question}
-
-    Use this as a starter template, do not modify the `app [main!] {...` line:
-    ```roc
-    ${start_roc_template}
-    ```
-
-    Extra instructions:
+    Important instructions:
+    - To execute an effectful function for every item in a list:
+      - Use `List.for_each!` if the function you want to pass returns `{}`.
+      - Use `List.for_each_try!` if the function you want to pass returns a `Result {} someerr`.
+      - Use `List.map_try!` if you want to return a Result where the success case is not `{}`.
+    - Don't use `List.walk_try!` if you can achieve the same thing with one of the cleaner alternatives above.
+    - `Task` has been removed from Roc, use `Result` instead.
+    - Try to print output in the main function to keep other function pure and easy to test.
     ${generic_roc_instructions}
     """
 
@@ -107,14 +96,34 @@ generic_roc_instructions =
     else
         some_function bar
     ```
-    - Make sure to properly format variables of multiline strings. Example:
+    - Very important: for multiline strings, `\"\"\"` should always be on its own line. No non-whitespace characters should be on the same line.
+      So, never write `something = \"\"\"`.
+      For the lines after `\"\"\"` we automatically cut off the amount of indentation to which `\"\"\"` is indented.
+      Here is an example of a properly formatted multiline string:
     ```
-    example_input_part1 =
+    multi_line_str =
         \"\"\"
-        1abc2
-        pqr3stu8vwx
-        a1b2c3d4e5f
-        treb7uchet
+        apple
+        pear
+        orange
         \"\"\"
     ```
+    - Never print errors, just return e.g `Err(FailedToWriteFile("Failed to write to file \${Path.display(output_path)}, usage: \${usage}"))`. Roc will automatically print errors that are returned by the main function.
+    - You can just use a builtin function like `Str.contains` or `Result.map_ok`, these do not require an import.
+    - Result.map does not exist, use Result.map_ok instead.
+    - Avoid using `Result.with_default` for lazy error handling.
+    - If your function needs to return a Result, do not use `?` on the last line of the function.
+    - Roc does not have for loops.
+    - Use descriptive variable names.
+    - If a function performs an effect, its name should end with `!`, and it's type signature should use the `=>` arrow instead of the `->` used for pure functions.
+    - Every `if` requires an `else` branch.
+    - Don't use Strings directly in `Err`, always wrap them in a tag so e.g `Err(MissingJSONField("I could not find the field amount in \${json_msg}."))` instead of `Err("I could not find the field amount in \${json_msg}.")`.
+    - You can use `Inspect.to_str(something)` to convert something to a str for printing.
+    - Very important: `?` does not work on its own line. It should usually be put after a `)`, e.g. `check_output = File.read_utf8!(cmd_output_file)?`.
+    - Tips and suggestions given by the compiler are not always correct and won't always point at the line that causes the problem. Keep an open mind.
+    - Write robust code that can handle edge cases.
+    - Add several top level expects to test your code, make sure to include some edge cases.
+    - You can not test effectful functions with top level expects, just test pure functions with mock data.
+    - Use defensive programming. For example; if a list should not be empty, check for it and return an error if it is.
+    - Write your code as simple as possible, avoid unnecessary complexity.
     """
