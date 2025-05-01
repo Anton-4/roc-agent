@@ -20,3 +20,4 @@ roc check Prompt/example_code_basic_cli.roc
 HELLO=1 roc ./Prompt/example_code_basic_cli.roc -- \"https://www.roc-lang.org\" roc.html
 
 roc test roc-starter-template.roc
+roc test Prompt/example_code_script.roc

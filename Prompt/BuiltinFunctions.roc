@@ -6,7 +6,7 @@ module [
 builtin_functions_block : Str
 builtin_functions_block =
     """
-    These are the builtin functions you can use:
+    Below are the builtin functions you can use, they are available by default and can't be imported.
     ```roc
     ${builtin_functions_raw}
     ```
@@ -59,7 +59,10 @@ builtin_functions_raw =
     List.len : List * -> U64
     List.map : List a, (a -> b) -> List b
     List.map2 : List a, List b, (a, b -> c) -> List c
+    List.for_each! : List a, (a => {}) => {}
+    List.for_each_try! : List a, (a => Result {} err) => Result {} err
     List.map_try : List elem, (elem -> Result ok err) -> Result (List ok) err
+    List.map_try! : List elem, (elem => Result ok err) => Result (List ok) err
     List.map_with_index : List a, (a, U64 -> b) -> List b
     List.max : List (Num a) -> Result (Num a) [ListWasEmpty]
     List.min : List (Num a) -> Result (Num a) [ListWasEmpty]
@@ -79,8 +82,10 @@ builtin_functions_raw =
     List.take_last : List elem, U64 -> List elem
     List.update : List a, U64, (a -> a) -> List a
     List.walk : List elem, state, (state, elem -> state) -> state
+    List.walk! : List elem, state, (state, elem => state) => state
     List.walk_backwards : List elem, state, (state, elem -> state) -> state
     List.walk_try : List elem, state, (state, elem -> Result state err) -> Result state err
+    List.walk_try! : List elem, state, (state, elem => Result state err) => Result state err
     List.walk_until : List elem, state, (state, elem -> [Continue state, Break state]) -> state
     List.walk_with_index : List elem, state, (state, elem, U64 -> state) -> state
     List.walk_with_index_until : List elem, state, (state, elem, U64 -> [Continue state, Break state]) -> state

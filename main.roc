@@ -12,23 +12,60 @@ import json.Option exposing [Option]
 import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
+import pf.Sleep
 
-import Prompt.PromptBuilder exposing [prompt_puzzle]
+import Prompt.SystemPrompts exposing [system_prompt_script] # system_prompt_puzzle is also available
 import "roc-starter-template.roc" as start_roc_template : Str
 
 prompt_text : Str
 prompt_text =
-    prompt_puzzle(puzzle_question, start_roc_template, after_instructions)
-
-puzzle_question =
+    # Modify the system_prompt_script^ to add general Roc writing instructions.
     """
-    Add a longest palindromic substring function to this Roc code, add tests using `expect`.
-    That function should do the following:
-    Given a string s, find the longest palindromic substring in s. A palindrome is a string that reads the same backward as forward.
+    # Script Assignment
+
+    ${script_question}
+
+    Note: do not modify the `app [main!] {...` line.
+    ```roc
+    ${start_roc_template}
+    ```
     """
 
-after_instructions =
-    "Do not modify the `app [main!] {...` line above."
+script_question =
+    """
+    Write a Roc script to:
+    1. Extract the exposes list from the file basic-cli/platform/main.roc, it looks like this:
+    ```
+        exposes [
+            Path,
+            Arg,
+            ...
+            Sqlite,
+        ]
+    ```
+    But exposes lists can also be on a single line.
+    2. For every item in that exposes list from main.roc we want to get the module list of the corresponding file,
+    so for Path we want to get the module list of basic-cli/platform/Path.roc. It typically looks like this:
+    ```
+    module [
+        Path,
+        IOErr,
+        display,
+        ...
+        delete_all!,
+        hard_link!,
+    ]
+    ```
+    3. Only keep things from the module list that start with a lower case letter.
+    4. Print the filtered lists to stdout.
+    """
+
+# puzzle_question =
+#     """
+#     Add a longest palindromic substring function to this Roc code, add tests using `expect`.
+#     That function should do the following:
+#     Given a string s, find the longest palindromic substring in s. A palindrome is a string that reads the same backward as forward.
+#     """
 
 # Output of `roc test` and `roc check` gets written to this file
 cmd_output_file = "last_cmd_output.txt"
@@ -52,12 +89,12 @@ main! = |_args|
 
 loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
-    info!("Prompt:\n\n${prompt}\n")?
+    info!("Prompt:\n\n${prompt}")?
 
-    info!("Asking Claude...\n")?
+    info!("Asking Claude...")?
     claude_answer = ask_claude!(prompt, previous_messages)?
 
-    info!("Claude's reply:\n\n${claude_answer}\nEND\n\n")?
+    info!("Claude's reply:\n\n${claude_answer}\nEND\n")?
 
     code_block_res = extract_markdown_code_block(claude_answer)
 
@@ -65,7 +102,10 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
         Ok(code_block) ->
             File.write_utf8!(code_block, claude_roc_file)?
 
-            info!("Running `roc check`...\n")?
+            info!("Sleeping to allow user to check out reply...")?
+            Sleep.millis!(10000)
+
+            info!("Running `roc check`...")?
             check_output_result = execute_roc_check!({})
 
             strip_color_codes!({})?
@@ -73,9 +113,12 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
             Stdout.line!("\n${Inspect.to_str(check_output)}\n\n")?
 
+            info!("Sleeping to allow user to analyze `roc check` output...")?
+            Sleep.millis!(5000)
+
             when check_output_result is
                 Ok({}) ->
-                    info!("Running `roc test`...\n")?
+                    info!("Running `roc test`...")?
                     test_output_result = execute_roc_test!({})
 
                     strip_color_codes!({})?
@@ -85,17 +128,34 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
                         Ok({}) ->
                             Stdout.line!("\n${Inspect.to_str(test_output)}\n\n")?
 
-                            Ok({})
+                            info!("Running `roc dev`...")?
+                            dev_output_result = execute_roc_dev!({})
+
+                            strip_color_codes!({})?
+                            dev_output = File.read_utf8!(cmd_output_file)?
+
+                            when dev_output_result is
+                                Ok({}) ->
+                                    Stdout.line!("\n${Inspect.to_str(dev_output)}\n\n")?
+
+                                    Ok({})
+
+                                Err(e) ->
+                                    info!("`roc dev` failed.")?
+
+                                    Stderr.line!(Inspect.to_str(e))?
+
+                                    retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, dev_output)
 
                         Err(e) ->
-                            info!("`roc test` failed.\n")?
+                            info!("`roc test` failed.")?
 
                             Stderr.line!(Inspect.to_str(e))?
 
                             retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, test_output)
 
                 Err(e) ->
-                    info!("`roc check` failed.\n")?
+                    info!("`roc check` failed.")?
 
                     Stderr.line!(Inspect.to_str(e))?
 
@@ -115,14 +175,17 @@ ask_claude! = |prompt, previous_messages|
                 { message & content: escape_str(message.content) },
         )
 
+    messages_to_send =
+        List.append(escaped_previous_messages, { role: "user", content: "${escaped_prompt}" })
+
+    claude_http_request!(messages_to_send)
+
+claude_http_request! : List { role : Str, content : Str } => Result Str _
+claude_http_request! = |messages_to_send|
     api_key =
         Env.decode!("ANTHROPIC_API_KEY")
         |> Result.map_err(|_| FailedToGetAPIKeyFromEnvVar)
         |> try
-
-    messages_to_send =
-        List.append(escaped_previous_messages, { role: "user", content: "${escaped_prompt}" })
-        |> messages_to_str
 
     request = {
         method: POST,
@@ -137,7 +200,8 @@ ask_claude! = |prompt, previous_messages|
             {
                 "model": "${claude_model}",
                 "max_tokens": 8192,
-                "messages": ${messages_to_send}
+                "system": "${escape_str(system_prompt_script)}",
+                "messages": ${messages_to_send |> messages_to_str}
             }
             """,
         ),
@@ -163,7 +227,20 @@ ask_claude! = |prompt, previous_messages|
                         Ok(first_content_elt) -> Ok(first_content_elt.text)
                         Err(_) -> Err(ClaudeReplyContentJsonFieldWasEmptyList)
 
-                Err(e) -> Err(ClaudeJsonDecodeFailed("Error:\n\tFailed to decode claude API reply into json: ${Inspect.to_str(e)}\n\n\tbody:\n\t\t${reply_body}"))
+                Err(e) ->
+                    # File.write_utf8!(messages_to_send, "messages_log.txt")?
+                    if Str.contains(reply_body, "rate_limit_error") and (List.len(messages_to_send) >= 3) then
+                        info!("rate_limit_error detected, trying again with some unnecessary messages removed...")?
+
+                        reduced_messages =
+                            List.concat(
+                                [List.first(messages_to_send)?],
+                                List.take_last(messages_to_send, 2),
+                            )
+
+                        claude_http_request!(reduced_messages)
+                    else
+                        Err(ClaudeJsonDecodeFailed("Error:\n\tFailed to decode claude API reply into json: ${Inspect.to_str(e)}\n\n\tbody:\n\t\t${reply_body}"))
 
         Err(err) ->
             Err(ClaudeHTTPSendFailed(err))
@@ -188,7 +265,7 @@ retry! = |remaining_claude_calls, previous_messages, old_prompt, claude_answer, 
 
         loop_claude!((remaining_claude_calls - 1), new_prompt, new_previous_messages)
     else
-        Err(ReachedMaxClaudeCalls)
+        Err(ReachedClaudeMaxRequests("Reached maximum number of requests to Claude API. This value is set in main.roc"))
 
 execute_roc_check! = |{}|
     bash_cmd =
@@ -209,9 +286,22 @@ execute_roc_test! = |{}|
         |> Cmd.arg("-c")
         |> Cmd.arg(
             """
-            (timeout 2m roc test main_claude.roc > last_cmd_output.txt 2>&1 || { ret=$?; if [ $ret -eq 124 ]; then echo "'roc test' timed out after two minutes!" >> last_cmd_output.txt; fi; exit $ret; })
+            (echo "$ roc test main_claude.roc\n" > last_cmd_output.txt && timeout 2m roc test main_claude.roc >> last_cmd_output.txt 2>&1 || { ret=$?; if [ $ret -eq 124 ]; then echo "'roc test' timed out after two minutes!" >> last_cmd_output.txt; fi; exit $ret; })
             """,
         )
+
+    cmd_exit_code = try(Cmd.status!, bash_cmd)
+
+    if cmd_exit_code != 0 then
+        Err(StripColorCodesFailedWithExitCode(cmd_exit_code))
+    else
+        Ok({})
+
+execute_roc_dev! = |{}|
+    bash_cmd =
+        Cmd.new("bash")
+        |> Cmd.arg("-c")
+        |> Cmd.arg("roc dev main_claude.roc > last_cmd_output.txt 2>&1")
 
     cmd_exit_code = try(Cmd.status!, bash_cmd)
 
@@ -246,8 +336,9 @@ extract_markdown_code_block = |text|
         Err(NoRocCodeBlockInClaudeReply(text))
     else
         split_on_backticks_roc = Str.split_on(text, "```roc")
+
         split_on_backticks =
-            List.get(split_on_backticks_roc, 1)?
+            List.last(split_on_backticks_roc)?
             |> Str.split_on("```")
 
         when List.get(split_on_backticks, 0) is
@@ -276,7 +367,7 @@ messages_to_str = |messages|
     """
 
 info! = |msg|
-    Stdout.line!("\u(001b)[34mINFO:\u(001b)[0m ${msg}")
+    Stdout.line!("\u(001b)[34mINFO:\u(001b)[0m ${msg}\n")
 
 escape_str : Str -> Str
 escape_str = |str|
