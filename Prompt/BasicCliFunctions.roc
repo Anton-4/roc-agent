@@ -1,5 +1,5 @@
 module [
-    basic_cli_functions_raw
+    basic_cli_functions_raw,
 ]
 
 # TODO test that these are up to date

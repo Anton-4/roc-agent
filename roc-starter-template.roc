@@ -3,12 +3,14 @@ app [main!] { pf: platform "https://github.com/roc-lang/basic-cli/releases/downl
 import pf.Stdout
 import pf.Arg exposing [Arg]
 
+# TODO: explain what the script does here
+
 main! : List Arg => Result {} _
 main! = |_args|
     hello : Str
     hello = "Hello, world!"
 
-    if Str.contains(hello, "world") && !Str.is_empty(hello) then
+    if Str.contains(hello, "world") and !Str.is_empty(hello) then
         Stdout.line!(hello)
     else
         Err(BadHello("The variable hello did not contain 'world' or was empty: \"${hello}\""))
@@ -20,5 +22,5 @@ expect
         b
         c
         """
-    
+
     multi_line_str == "a\nb\nc"

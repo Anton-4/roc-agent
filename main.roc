@@ -14,9 +14,8 @@ import pf.Cmd
 import pf.File
 import pf.Sleep
 
-import Prompt.SystemPrompts exposing [system_prompt_script]
+import Prompt.SystemPrompts exposing [system_prompt_script] # system_prompt_puzzle is also available
 import "roc-starter-template.roc" as start_roc_template : Str
-#import "main_claude_v1.roc" as start_from_code : Str
 
 prompt_text : Str
 prompt_text =
@@ -61,9 +60,6 @@ script_question =
     4. Print the filtered lists to stdout.
     """
 
-
-#     prompt_puzzle(puzzle_question, start_roc_template)
-
 # puzzle_question =
 #     """
 #     Add a longest palindromic substring function to this Roc code, add tests using `expect`.
@@ -107,7 +103,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
             File.write_utf8!(code_block, claude_roc_file)?
 
             info!("Sleeping to allow user to check out reply...")?
-            Sleep.millis!(15000)
+            Sleep.millis!(10000)
 
             info!("Running `roc check`...")?
             check_output_result = execute_roc_check!({})
@@ -118,7 +114,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
             Stdout.line!("\n${Inspect.to_str(check_output)}\n\n")?
 
             info!("Sleeping to allow user to analyze `roc check` output...")?
-            Sleep.millis!(7000)
+            Sleep.millis!(5000)
 
             when check_output_result is
                 Ok({}) ->
@@ -184,7 +180,6 @@ ask_claude! = |prompt, previous_messages|
 
     claude_http_request!(messages_to_send)
 
-
 claude_http_request! : List { role : Str, content : Str } => Result Str _
 claude_http_request! = |messages_to_send|
     api_key =
@@ -232,10 +227,9 @@ claude_http_request! = |messages_to_send|
                         Ok(first_content_elt) -> Ok(first_content_elt.text)
                         Err(_) -> Err(ClaudeReplyContentJsonFieldWasEmptyList)
 
-                Err(e) -> 
-                    #File.write_utf8!(messages_to_send, "messages_log.txt")?
-                    if Str.contains(reply_body, "rate_limit_error") && (List.len(messages_to_send) >= 3) then
-
+                Err(e) ->
+                    # File.write_utf8!(messages_to_send, "messages_log.txt")?
+                    if Str.contains(reply_body, "rate_limit_error") and (List.len(messages_to_send) >= 3) then
                         info!("rate_limit_error detected, trying again with some unnecessary messages removed...")?
 
                         reduced_messages =
@@ -245,7 +239,6 @@ claude_http_request! = |messages_to_send|
                             )
 
                         claude_http_request!(reduced_messages)
-                            
                     else
                         Err(ClaudeJsonDecodeFailed("Error:\n\tFailed to decode claude API reply into json: ${Inspect.to_str(e)}\n\n\tbody:\n\t\t${reply_body}"))
 

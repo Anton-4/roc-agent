@@ -2,9 +2,11 @@ module [
     system_prompt_puzzle,
     system_prompt_script,
     # TODO: system_prompt_fix_error,
+    # TODO: fix failing tests
 ]
 
 import "example_code_basic_cli.roc" as basic_cli_example : Str
+import "example_code_script.roc" as script_example : Str
 import Prompt.BuiltinFunctions exposing [builtin_functions_block]
 import Prompt.BasicCliFunctions exposing [basic_cli_functions_raw]
 
@@ -16,14 +18,17 @@ system_prompt_puzzle =
 
     ${builtin_functions_block}
 
-    ${wrap_example(basic_cli_example)}
+    Here is some example Roc code:
+    ```roc
+    ${basic_cli_example}
+    ```
 
     Important instructions:
     ${generic_roc_instructions}
     """
 
 system_prompt_script : Str
-system_prompt_script = 
+system_prompt_script =
     """
     We're going to write a script in Roc.
 
@@ -34,7 +39,10 @@ system_prompt_script =
     ${basic_cli_functions_raw}
     ```
 
-    ${wrap_example(basic_cli_example)}
+    Below is an example Roc script. Follow the conventions and style of this script.
+    ```roc
+    ${script_example}
+    ```
 
     Important instructions:
     - To execute an effectful function for every item in a list:
@@ -43,17 +51,9 @@ system_prompt_script =
       - Use `List.map_try!` if you want to return a Result where the success case is not `{}`.
     - Don't use `List.walk_try!` if you can achieve the same thing with one of the cleaner alternatives above.
     - `Task` has been removed from Roc, use `Result` instead.
-    - Try to print output in the main function to keep other function pure and easy to test.
+    - Only print to Stdout in the main function to keep other function pure and easy to test.
+    - Describe what the script does in a comment at the top.
     ${generic_roc_instructions}
-    """
-
-wrap_example : Str -> Str
-wrap_example = |roc_example|
-    """
-    Here is some example Roc code:
-    ```roc
-    ${roc_example}
-    ```
     """
 
 generic_roc_instructions : Str
@@ -114,7 +114,7 @@ generic_roc_instructions =
     - Avoid using `Result.with_default` for lazy error handling.
     - If your function needs to return a Result, do not use `?` on the last line of the function.
     - Roc does not have for loops.
-    - Use descriptive variable names.
+    - Use descriptive variable and function names. Don't add a comment if the name is sufficiently descriptive.
     - If a function performs an effect, its name should end with `!`, and it's type signature should use the `=>` arrow instead of the `->` used for pure functions.
     - Every `if` requires an `else` branch.
     - Don't use Strings directly in `Err`, always wrap them in a tag so e.g `Err(MissingJSONField("I could not find the field amount in \${json_msg}."))` instead of `Err("I could not find the field amount in \${json_msg}.")`.
