@@ -5,7 +5,7 @@
 
 # roc-agent
 
-AI agent setup for Roc programming. Makes Claude write code in a loop until all tests pass. Alter `puzzle_question` in main.roc to fit your purpose.
+AI agent setup for Roc programming. Makes Claude write code in a loop until all tests pass. Alter `script_question` in main.roc to fit your purpose.
 
 Note: the roc-agent can currently only work with a single `.roc` file.
 

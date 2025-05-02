@@ -61,7 +61,7 @@ generic_roc_instructions =
     """
     - If the user provides you with an error, start your reply with an analysis of what could be going wrong paired with potential solutions.
     - Do not provide an explanation after the code block.
-    - Always reply with the full code, no partial snippets with changes.
+    - Always reply with the full code, no partial snippets with changes. Your code should be in a markdown code block that starts with "```roc".
     - Roc no longer uses white space application syntax, but parens and commas instead. So `Stdout.line! "Hello, World!"` is now `Stdout.line!("Hello, World!")`.
     - Roc used to use pascalCase for variables, this has changed to snake_case. So `fizzBuzz` is now `fizz_buzz`.
     - Do not use the Parser package.
