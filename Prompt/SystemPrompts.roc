@@ -1,8 +1,9 @@
 module [
     system_prompt_puzzle,
     system_prompt_script,
-    # TODO: system_prompt_fix_error,
-    # TODO: fix failing tests
+    # TODO: prompt to fix errors,
+    # TODO: prompt to fix failing tests,
+    # TODO: prompt to debug issue,
 ]
 
 import "example_code_basic_cli.roc" as basic_cli_example : Str
