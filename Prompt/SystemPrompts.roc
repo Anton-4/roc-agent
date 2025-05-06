@@ -1,7 +1,7 @@
 module [
     system_prompt_puzzle,
     system_prompt_script,
-    # TODO: prompt to fix errors,
+    system_prompt_fix_error,
     # TODO: prompt to fix failing tests,
     # TODO: prompt to debug issue,
 ]
@@ -26,6 +26,11 @@ system_prompt_puzzle =
 
     Important instructions:
     ${generic_roc_instructions}
+    - Never print errors, just return e.g `Err(FailedToWriteFile("Failed to write to file \${Path.display(output_path)}, usage: \${usage}"))`. Roc will automatically print errors that are returned by the main function.
+    - Add several top level expects to test your code, make sure to include some edge cases.
+    - You can not test effectful functions with top level expects, just test pure functions with mock data.
+    - Write robust code that can handle edge cases.
+    - Use defensive programming. For example; if a list should not be empty, check for it and return an error if it is.
     """
 
 system_prompt_script : Str
@@ -54,6 +59,34 @@ system_prompt_script =
     - `Task` has been removed from Roc, use `Result` instead.
     - Only print to Stdout in the main function to keep other function pure and easy to test.
     - Describe what the script does in a comment at the top.
+    ${generic_roc_instructions}
+    - Never print errors, just return e.g `Err(FailedToWriteFile("Failed to write to file \${Path.display(output_path)}, usage: \${usage}"))`. Roc will automatically print errors that are returned by the main function.
+    - Add several top level expects to test your code, make sure to include some edge cases.
+    - You can not test effectful functions with top level expects, just test pure functions with mock data.
+    - Write robust code that can handle edge cases.
+    - Use defensive programming. For example; if a list should not be empty, check for it and return an error if it is.
+    """
+
+system_prompt_fix_error : Str
+system_prompt_fix_error =
+    """
+    We're going to fix all errors in a Roc program.
+
+    You're allowed to add builtin functions if needed.
+    ${builtin_functions_block}
+
+    You're also allowed to add basic-cli functions if needed.
+    Below are the basic-cli functions you can use, in contrast to the builtin functions these do need imports. So if you want to use `Env.cwd!`, add `import pf.Env`.
+    ```roc
+    ${basic_cli_functions_raw}
+    ```
+
+    Below is an example Roc script with the latest syntax.
+    ```roc
+    ${script_example}
+    ```
+
+    Important instructions:
     ${generic_roc_instructions}
     """
 
@@ -109,7 +142,6 @@ generic_roc_instructions =
         orange
         \"\"\"
     ```
-    - Never print errors, just return e.g `Err(FailedToWriteFile("Failed to write to file \${Path.display(output_path)}, usage: \${usage}"))`. Roc will automatically print errors that are returned by the main function.
     - You can just use a builtin function like `Str.contains` or `Result.map_ok`, these do not require an import.
     - Result.map does not exist, use Result.map_ok instead.
     - Avoid using `Result.with_default` for lazy error handling.
@@ -122,9 +154,5 @@ generic_roc_instructions =
     - You can use `Inspect.to_str(something)` to convert something to a str for printing.
     - Very important: `?` does not work on its own line. It should usually be put after a `)`, e.g. `check_output = File.read_utf8!(cmd_output_file)?`.
     - Tips and suggestions given by the compiler are not always correct and won't always point at the line that causes the problem. Keep an open mind.
-    - Write robust code that can handle edge cases.
-    - Add several top level expects to test your code, make sure to include some edge cases.
-    - You can not test effectful functions with top level expects, just test pure functions with mock data.
-    - Use defensive programming. For example; if a list should not be empty, check for it and return an error if it is.
     - Write your code as simple as possible, avoid unnecessary complexity.
     """
