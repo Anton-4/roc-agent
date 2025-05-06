@@ -14,51 +14,96 @@ import pf.Cmd
 import pf.File
 import pf.Sleep
 
-import Prompt.SystemPrompts exposing [system_prompt_script] # system_prompt_puzzle is also available
-import "roc-starter-template.roc" as start_roc_template : Str
+import Prompt.SystemPrompts exposing [system_prompt_fix_error] # system_prompt_script, system_prompt_puzzle are also available
+# import "roc-starter-template.roc" as start_roc_template : Str
+import "code-with-error.roc" as code_with_error : Str
+
+system_prompt : Str
+system_prompt = system_prompt_fix_error
+
+run_roc_test = Bool.false
+run_roc_dev = Bool.false
 
 prompt_text : Str
 prompt_text =
-    # Modify the system_prompt_script^ to add general Roc writing instructions.
+    # Modify the system_prompt_script^ to add generally applicable Roc error fixing instructions.
     """
-    # Script Assignment
+    # Error to Solve
 
-    ${script_question}
+    Alter the code below to fix this error:
 
-    Note: do not modify the `app [main!] {...` line.
+    ── TYPE MISMATCH in code-with-error.roc ────────────────────────────────────────
+
+    This 3rd argument to |> has an unexpected type:
+
+    20│           list
+    21│           |> List.walk(
+    22│               Nil,
+    23│>              |acc, value|
+    24│>                  { value, next: acc },
+    25│           )
+
+    The argument is an anonymous function of type:
+
+        […]*, U64 -> {
+            next : [Nil],
+            value : U64,
+        }
+
+    But |> needs its 3rd argument to be:
+
+        […]*, U64 -> [Nil]
+
+    ────────────────────────────────────────────────────────────────────────────────
+
     ```roc
-    ${start_roc_template}
+    ${code_with_error}
     ```
+    Note: do not modify the `app [main!] {...` line.
     """
 
-script_question =
-    """
-    Write a Roc script to:
-    1. Extract the exposes list from the file basic-cli/platform/main.roc, it looks like this:
-    ```
-        exposes [
-            Path,
-            Arg,
-            ...
-            Sqlite,
-        ]
-    ```
-    But exposes lists can also be on a single line.
-    2. For every item in that exposes list from main.roc we want to get the module list of the corresponding file,
-    so for Path we want to get the module list of basic-cli/platform/Path.roc. It typically looks like this:
-    ```
-    module [
-        Path,
-        IOErr,
-        display,
-        ...
-        delete_all!,
-        hard_link!,
-    ]
-    ```
-    3. Only keep things from the module list that start with a lower case letter.
-    4. Print the filtered lists to stdout.
-    """
+# prompt_text : Str
+# prompt_text =
+#     # Modify the system_prompt_script^ to add general Roc writing instructions.
+#     """
+#     # Script Assignment
+
+#     ${script_question}
+
+#     Note: do not modify the `app [main!] {...` line.
+#     ```roc
+#     ${start_roc_template}
+#     ```
+#     """
+
+# script_question =
+#     """
+#     Write a Roc script to:
+#     1. Extract the exposes list from the file basic-cli/platform/main.roc, it looks like this:
+#     ```
+#         exposes [
+#             Path,
+#             Arg,
+#             ...
+#             Sqlite,
+#         ]
+#     ```
+#     But exposes lists can also be on a single line.
+#     2. For every item in that exposes list from main.roc we want to get the module list of the corresponding file,
+#     so for Path we want to get the module list of basic-cli/platform/Path.roc. It typically looks like this:
+#     ```
+#     module [
+#         Path,
+#         IOErr,
+#         display,
+#         ...
+#         delete_all!,
+#         hard_link!,
+#     ]
+#     ```
+#     3. Only keep things from the module list that start with a lower case letter.
+#     4. Print the filtered lists to stdout.
+#     """
 
 # puzzle_question =
 #     """
@@ -118,41 +163,47 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
             when check_output_result is
                 Ok({}) ->
-                    info!("Running `roc test`...")?
-                    test_output_result = execute_roc_test!({})
+                    if run_roc_test then
+                        info!("Running `roc test`...")?
+                        test_output_result = execute_roc_test!({})
 
-                    strip_color_codes!({})?
-                    test_output = File.read_utf8!(cmd_output_file)?
+                        strip_color_codes!({})?
+                        test_output = File.read_utf8!(cmd_output_file)?
 
-                    when test_output_result is
-                        Ok({}) ->
-                            Stdout.line!("\n${Inspect.to_str(test_output)}\n\n")?
+                        when test_output_result is
+                            Ok({}) ->
+                                Stdout.line!("\n${Inspect.to_str(test_output)}\n\n")?
 
-                            info!("Running `roc dev`...")?
-                            dev_output_result = execute_roc_dev!({})
+                                if run_roc_dev then
+                                    info!("Running `roc dev`...")?
+                                    dev_output_result = execute_roc_dev!({})
 
-                            strip_color_codes!({})?
-                            dev_output = File.read_utf8!(cmd_output_file)?
+                                    strip_color_codes!({})?
+                                    dev_output = File.read_utf8!(cmd_output_file)?
 
-                            when dev_output_result is
-                                Ok({}) ->
-                                    Stdout.line!("\n${Inspect.to_str(dev_output)}\n\n")?
+                                    when dev_output_result is
+                                        Ok({}) ->
+                                            Stdout.line!("\n${Inspect.to_str(dev_output)}\n\n")?
 
+                                            Ok({})
+
+                                        Err(e) ->
+                                            info!("`roc dev` failed.")?
+
+                                            Stderr.line!(Inspect.to_str(e))?
+
+                                            retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, dev_output)
+                                else
                                     Ok({})
 
-                                Err(e) ->
-                                    info!("`roc dev` failed.")?
+                            Err(e) ->
+                                info!("`roc test` failed.")?
 
-                                    Stderr.line!(Inspect.to_str(e))?
+                                Stderr.line!(Inspect.to_str(e))?
 
-                                    retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, dev_output)
-
-                        Err(e) ->
-                            info!("`roc test` failed.")?
-
-                            Stderr.line!(Inspect.to_str(e))?
-
-                            retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, test_output)
+                                retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, test_output)
+                    else
+                        Ok({})
 
                 Err(e) ->
                     info!("`roc check` failed.")?
@@ -200,7 +251,7 @@ claude_http_request! = |messages_to_send|
             {
                 "model": "${claude_model}",
                 "max_tokens": 8192,
-                "system": "${escape_str(system_prompt_script)}",
+                "system": "${escape_str(system_prompt)}",
                 "messages": ${messages_to_send |> messages_to_str}
             }
             """,
