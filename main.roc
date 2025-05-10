@@ -13,6 +13,7 @@ import Decode exposing [from_bytes_partial]
 import pf.Cmd
 import pf.File
 import pf.Sleep
+import pf.Arg exposing [Arg]
 
 import Prompt.SystemPrompts exposing [system_prompt_fix_error] # system_prompt_script, system_prompt_puzzle are also available
 # import "roc-starter-template.roc" as start_roc_template : Str
@@ -125,13 +126,18 @@ claude_model = "claude-3-7-sonnet-20250219"
 
 http_request_timeout = 5 * 60 * 1000
 
+main! : List Arg => Result {} _
 main! = |_args|
     roc_version_check!({})?
 
-    loop_claude!(claude_max_requests, prompt_text, [])?
+    claude_calls_leftover = loop_claude!(claude_max_requests, prompt_text, [])?
+
+    Stdout.line!("Claude finished in ${Num.to_str(claude_max_requests - claude_calls_leftover)} requests.")?
 
     Ok({})
 
+# returns remaining claude calls just for info
+loop_claude! : U64, Str, List { role : Str, content : Str } => Result U64 _
 loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
     info!("Prompt:\n\n${prompt}")?
@@ -185,7 +191,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
                                         Ok({}) ->
                                             Stdout.line!("\n${Inspect.to_str(dev_output)}\n\n")?
 
-                                            Ok({})
+                                            Ok(remaining_claude_calls)
 
                                         Err(e) ->
                                             info!("`roc dev` failed.")?
@@ -194,7 +200,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
                                             retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, dev_output)
                                 else
-                                    Ok({})
+                                    Ok(remaining_claude_calls)
 
                             Err(e) ->
                                 info!("`roc test` failed.")?
@@ -203,7 +209,7 @@ loop_claude! = |remaining_claude_calls, prompt, previous_messages|
 
                                 retry!(remaining_claude_calls, previous_messages, prompt, claude_answer, test_output)
                     else
-                        Ok({})
+                        Ok(remaining_claude_calls)
 
                 Err(e) ->
                     info!("`roc check` failed.")?
@@ -252,9 +258,11 @@ claude_http_request! = |messages_to_send|
                 "model": "${claude_model}",
                 "max_tokens": 8192,
                 "system": "${escape_str(system_prompt)}",
-                "messages": ${messages_to_send |> messages_to_str}
+                "messages": ${messages_to_send |> messages_to_str},
+                "temperature": 0.0
             }
             """,
+            # Note: temperature 0.0 should be best but I did not verify this across a range of tasks.
         ),
         timeout_ms: TimeoutMilliseconds(http_request_timeout),
     }
@@ -316,7 +324,7 @@ retry! = |remaining_claude_calls, previous_messages, old_prompt, claude_answer, 
 
         loop_claude!((remaining_claude_calls - 1), new_prompt, new_previous_messages)
     else
-        Err(ReachedClaudeMaxRequests("Reached maximum number of requests to Claude API. This value is set in main.roc"))
+        Err(ReachedClaudeMaxRequests("Reached maximum number of requests (${Num.to_str(claude_max_requests)}) to Claude. Note: this value is set by the user in main.roc."))
 
 execute_roc_check! = |{}|
     bash_cmd =
